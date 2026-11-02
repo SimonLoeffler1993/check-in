@@ -1,0 +1,27 @@
+// Zwischendatenbank der Check-in-App: enthält nur verschlüsselte Datensätze.
+// Unverschlüsselt ist allein der Zeitpunkt, den Inhalt kann erst die API entschlüsseln.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model CheckIn {
+  id                         String   @id @default(uuid()) @db.Char(36)
+  erstelltAm                 DateTime @default(now())
+  // Format des verschlüsselten Datensatzes
+  version                    Int
+  // SHA-256 des Public Keys: zeigt der API, welcher private Schlüssel passt
+  schluesselId               String   @db.Char(64)
+  // Base64: AES-Schlüssel (RSA-OAEP), IV und AES-GCM-Daten
+  verschluesselterSchluessel String   @db.Text
+  iv                         String   @db.VarChar(32)
+  daten                      String   @db.Text
+
+  @@index([erstelltAm])
+  @@map("checkins")
+}
