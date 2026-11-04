@@ -12,9 +12,7 @@
     "preview": "vite preview",
     "format": "biome format",
     "lint": "biome lint",
-    "check": "biome check",
-    "db:migrate": "prisma migrate deploy",
-    "db:neu": "prisma migrate dev"
+    "check": "biome check"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.1",

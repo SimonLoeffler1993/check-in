@@ -4,7 +4,7 @@
 
 1. Der **Browser** verschlüsselt das Formular mit einem Public Key.
 2. **TanStack Start** speichert nur den verschlüsselten Datensatz per Prisma in einer eigenen Zwischendatenbank (MariaDB).
-3. Die **API** holt die Datensätze später ab und entschlüsselt sie mit dem privaten Schlüssel. Dieser Teil ist noch nicht gebaut.
+3. Die **API** liest die Datensätze und entschlüsselt sie mit dem privaten Schlüssel, das **Center** übernimmt sie als Kunden.
 
 Der private Schlüssel gehört **nie** auf den Server dieser App.
 
@@ -13,23 +13,24 @@ Der private Schlüssel gehört **nie** auf den Server dieser App.
 ```bash
 npm install
 cp .env.example .env     # DATABASE_URL und CHECKIN_PUBLIC_KEY eintragen
-npm run db:migrate       # Tabellen anlegen (prisma migrate deploy)
 npx prisma generate
 npm run dev
 ```
 
-### Schlüsselpaar erzeugen
+Die Tabellen legt die API an, sie pflegt das Schema mit Alembic (`alembic -c alembic_checkin.ini upgrade head` in `skiserviceapi/`, beim Container-Start automatisch, wenn `CHECKIN_DB_HOST` gesetzt ist). Prisma ist hier nur der Datenbank-Client: Bei einer Schema-Änderung `prisma/schema.prisma` nachziehen und kein `prisma migrate` oder `prisma db push` verwenden.
 
-Außerhalb des Repos und am besten auf dem Rechner, der später entschlüsselt:
+### Schlüsselpaar
 
-```bash
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out checkin_privat.pem
-openssl rsa -in checkin_privat.pem -pubout -outform DER | base64 -w0   # Wert für CHECKIN_PUBLIC_KEY
-```
+Das Schlüsselpaar erzeugt das Skiservice Center unter **Verwalten → Einstellungen → Check-in**. Den angezeigten Public Key von Hand als `CHECKIN_PUBLIC_KEY` eintragen und die App neu starten.
 
-- `checkin_privat.pem` sicher sichern. **Ohne ihn sind alle Datensätze unwiederbringlich verloren.**
+- Der private Schlüssel liegt in der Datenbank der API und verlässt sie über keine Schnittstelle. Er gehört **nie** auf den Server dieser App und nie in die Zwischendatenbank.
+- Backups der API-Datenbank enthalten ihn mit. Wer die Haupt-DB oder ein Backup davon hat, kann alle noch offenen Check-ins entschlüsseln.
 - Die App lehnt Schlüssel unter 3072 Bit ab, das Formular zeigt dann „nicht verfügbar“.
-- Schlüsselwechsel: `CHECKIN_PUBLIC_KEY` tauschen und den alten privaten Schlüssel behalten, bis alle alten Datensätze abgeholt sind. Die Spalte `schluesselId` zeigt, welcher Schlüssel zu einem Datensatz gehört.
+- Schlüsselwechsel: im Center einen neuen erzeugen und `CHECKIN_PUBLIC_KEY` tauschen. Alte Schlüssel bleiben, ältere Datensätze sind weiter lesbar. Die Spalte `schluesselId` zeigt, welcher Schlüssel zu einem Datensatz gehört.
+
+## Abholen
+
+Die API liest die Zwischendatenbank direkt (`CHECKIN_DB_HOST`, `_PORT`, `_USER`, `_PASSWORD`, `_NAME`) und entschlüsselt erst beim Anzeigen im Center. In der Kundensuche übernimmt „Letzte Kunden → Check-in“ einen Datensatz als Kunden, danach wird er aus der Zwischendatenbank gelöscht.
 
 ## Einstellungen
 
@@ -57,8 +58,6 @@ Prüfen der Felder → Prüf-Dialog (falls an) → Verschlüsseln und Senden, de
 | `npm run dev` | Entwicklung, liest `.env` |
 | `npm run build` | `prisma generate` und Produktions-Build nach `.output/` |
 | `node .output/server/index.mjs` | Produktion, Umgebungsvariablen müssen gesetzt sein |
-| `npm run db:neu` | neue Migration nach Änderung am Schema (`prisma migrate dev`) |
-| `npm run db:migrate` | Migrationen einspielen |
 | `npm run check` | Biome |
 
 ## Format eines Datensatzes
@@ -83,7 +82,7 @@ Die Zusatzdaten (AAD) von AES-GCM sind `checkin:v1:<schluesselId>`. Der Klartext
 }
 ```
 
-`tools/entschluesseln_test.py` zeigt die Entschlüsselung in Python und ist die Vorlage für die API:
+Die Entschlüsselung steht in `skiserviceapi/app/services/checkin.py`. Zum Prüfen mit einem eigenen Schlüsselpaar gibt es `tools/entschluesseln_test.py`:
 
 ```bash
 pip install cryptography
@@ -108,7 +107,6 @@ Außerdem wichtig:
 ## Offen vor dem Internet-Betrieb
 
 - Datenschutzerklärung und Impressum unter eigenen URLs bereitstellen und eintragen; das Formular verlinkt sie nur, eine Einwilligung fragt es nicht ab
-- Löschfrist und Abholweg zur API (abgeholte Datensätze löschen)
-- Dockerfile und Deployment
+- Löschfrist für nicht übernommene Datensätze
+- Dockerfile und ein eigenes Compose, das die App sauber von der internen API trennt: Vorerst läuft alles nur zum Testen nebeneinander. Die App darf später weder die Datenbank noch den Container der API erreichen
 - Strenge Content-Security-Policy, passend zu den Inline-Skripten des SSR
-- Die Spalte `Plz` der API ist eine Zahl: Führende Nullen (`01067`) gehen dort beim Import verloren

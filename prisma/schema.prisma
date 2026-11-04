@@ -1,5 +1,8 @@
 // Zwischendatenbank der Check-in-App: enthält nur verschlüsselte Datensätze.
 // Unverschlüsselt ist allein der Zeitpunkt, den Inhalt kann erst die API entschlüsseln.
+//
+// Prisma ist hier nur der Datenbank-Client. Das Schema pflegt die API mit Alembic (skiserviceapi/alembic_checkin),
+// Änderungen dort müssen hier nachgezogen werden. Kein "prisma migrate" oder "prisma db push" verwenden.
 
 generator client {
   provider = "prisma-client"
