@@ -12,7 +12,7 @@ Der private Schlüssel gehört **nie** auf den Server dieser App.
 
 ```bash
 npm install
-cp .env.example .env     # DATABASE_URL und CHECKIN_PUBLIC_KEY eintragen
+cp .env.example .env     # DATABASE_URL und CHECKIN_PUBLIC_KEY_DATEI bzw. CHECKIN_PUBLIC_KEY eintragen
 npx prisma generate
 npm run dev
 ```
@@ -21,12 +21,20 @@ Die Tabellen legt die API an, sie pflegt das Schema mit Alembic (`alembic -c ale
 
 ### Schlüsselpaar
 
-Das Schlüsselpaar erzeugt das Skiservice Center unter **Verwalten → Einstellungen → Check-in**. Den angezeigten Public Key von Hand als `CHECKIN_PUBLIC_KEY` eintragen und die App neu starten.
+Das Schlüsselpaar liegt in der Datenbank der API. Es muss nichts kopiert werden:
+
+- Die API schreibt den aktuellen Public Key bei jedem Start und nach jedem neuen Schlüssel in `CHECKIN_PUBLIC_KEY_ORDNER`. Beim ersten Start erzeugt sie den Schlüssel selbst.
+- Die App bindet dasselbe Volume nur lesend ein und liest die Datei aus `CHECKIN_PUBLIC_KEY_DATEI` bei jedem Zugriff. Ein neuer Schlüssel gilt ohne Neustart.
+- Ohne gemeinsames Volume, z. B. in der Entwicklung: Public Key im Center unter **Verwalten → Einstellungen → Check-in** kopieren, als `CHECKIN_PUBLIC_KEY` eintragen und die App neu starten.
 
 - Der private Schlüssel liegt in der Datenbank der API und verlässt sie über keine Schnittstelle. Er gehört **nie** auf den Server dieser App und nie in die Zwischendatenbank.
 - Backups der API-Datenbank enthalten ihn mit. Wer die Haupt-DB oder ein Backup davon hat, kann alle noch offenen Check-ins entschlüsseln.
 - Die App lehnt Schlüssel unter 3072 Bit ab, das Formular zeigt dann „nicht verfügbar“.
-- Schlüsselwechsel: im Center einen neuen erzeugen und `CHECKIN_PUBLIC_KEY` tauschen. Alte Schlüssel bleiben, ältere Datensätze sind weiter lesbar. Die Spalte `schluesselId` zeigt, welcher Schlüssel zu einem Datensatz gehört.
+- Schlüsselwechsel: im Center einen neuen erzeugen. Alte Schlüssel bleiben, ältere Datensätze sind weiter lesbar. Die Spalte `schluesselId` zeigt, welcher Schlüssel zu einem Datensatz gehört.
+
+## Docker
+
+Ein Beispiel, das die App von API und Kundendaten trennt, liegt in `skiserviceapi/docker/getrennt/`. Die App hängt dort nur an internen Netzen, ein Proxy-Container (Caddy) übernimmt HTTPS und ist der einzige Weg von außen. Ohne HTTPS gibt es keine Verschlüsselung im Browser.
 
 ## Abholen
 
@@ -34,12 +42,13 @@ Die API liest die Zwischendatenbank direkt (`CHECKIN_DB_HOST`, `_PORT`, `_USER`,
 
 ## Einstellungen
 
-Alles kommt aus der Umgebung und wird zur Laufzeit gelesen, ein Ändern braucht nur einen Neustart.
+Alles kommt aus der Umgebung und wird zur Laufzeit gelesen, ein Ändern braucht höchstens einen Neustart.
 
 | Variable | Pflicht | Standard | Wirkung |
 |---|---|---|---|
 | `DATABASE_URL` | ja | – | Zwischendatenbank |
-| `CHECKIN_PUBLIC_KEY` | ja | – | Public Key, ohne ihn zeigt das Formular „nicht verfügbar“ |
+| `CHECKIN_PUBLIC_KEY_DATEI` | ja* | – | Datei mit dem Public Key im gemeinsamen Volume, ohne Key zeigt das Formular „nicht verfügbar“ |
+| `CHECKIN_PUBLIC_KEY` | ja* | – | Public Key direkt, *nur ohne `CHECKIN_PUBLIC_KEY_DATEI` |
 | `CHECKIN_PRUEFDIALOG` | nein | an | Prüf-Dialog vor dem Absenden, nur `false` oder `0` schalten ihn ab |
 | `CHECKIN_DATENSCHUTZ_URL` | nein | leer | Link im Footer und beim Absende-Knopf, leer = kein Link |
 | `CHECKIN_IMPRESSUM_URL` | nein | leer | Link im Footer, leer = kein Link |
@@ -108,5 +117,4 @@ Außerdem wichtig:
 
 - Datenschutzerklärung und Impressum unter eigenen URLs bereitstellen und eintragen; das Formular verlinkt sie nur, eine Einwilligung fragt es nicht ab
 - Löschfrist für nicht übernommene Datensätze
-- Dockerfile und ein eigenes Compose, das die App sauber von der internen API trennt: Vorerst läuft alles nur zum Testen nebeneinander. Die App darf später weder die Datenbank noch den Container der API erreichen
 - Strenge Content-Security-Policy, passend zu den Inline-Skripten des SSR
