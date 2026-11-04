@@ -31,6 +31,25 @@ openssl rsa -in checkin_privat.pem -pubout -outform DER | base64 -w0   # Wert f�
 - Die App lehnt Schlüssel unter 3072 Bit ab, das Formular zeigt dann „nicht verfügbar“.
 - Schlüsselwechsel: `CHECKIN_PUBLIC_KEY` tauschen und den alten privaten Schlüssel behalten, bis alle alten Datensätze abgeholt sind. Die Spalte `schluesselId` zeigt, welcher Schlüssel zu einem Datensatz gehört.
 
+## Einstellungen
+
+Alles kommt aus der Umgebung und wird zur Laufzeit gelesen, ein Ändern braucht nur einen Neustart.
+
+| Variable | Pflicht | Standard | Wirkung |
+|---|---|---|---|
+| `DATABASE_URL` | ja | – | Zwischendatenbank |
+| `CHECKIN_PUBLIC_KEY` | ja | – | Public Key, ohne ihn zeigt das Formular „nicht verfügbar“ |
+| `CHECKIN_PRUEFDIALOG` | nein | an | Prüf-Dialog vor dem Absenden, nur `false` oder `0` schalten ihn ab |
+| `CHECKIN_DATENSCHUTZ_URL` | nein | leer | Link im Footer und beim Absende-Knopf, leer = kein Link |
+| `CHECKIN_IMPRESSUM_URL` | nein | leer | Link im Footer, leer = kein Link |
+| `TRUST_PROXY` | nein | `0` | `1` hinter einem eigenen Reverse Proxy |
+
+Für die Links gelten nur `http`- und `https`-URLs, alles andere wird ignoriert und ins Log geschrieben.
+
+## Ablauf beim Absenden
+
+Prüfen der Felder → Prüf-Dialog (falls an) → Verschlüsseln und Senden, der Brief wird verschlossen → **erst nach der Bestätigung des Servers** fliegt der Brief weg → „Vielen Dank“. Bei einem Fehler geht es mit Meldung und allen Eingaben zurück ins Formular. Wer im System „weniger Bewegung“ eingestellt hat, sieht den Ablauf ohne Animation.
+
 ## Befehle
 
 | Befehl | Zweck |
@@ -88,7 +107,7 @@ Außerdem wichtig:
 
 ## Offen vor dem Internet-Betrieb
 
-- Datenschutzerklärung und Impressum, ggf. Einwilligung im Formular
+- Datenschutzerklärung und Impressum unter eigenen URLs bereitstellen und eintragen; das Formular verlinkt sie nur, eine Einwilligung fragt es nicht ab
 - Löschfrist und Abholweg zur API (abgeholte Datensätze löschen)
 - Dockerfile und Deployment
 - Strenge Content-Security-Policy, passend zu den Inline-Skripten des SSR

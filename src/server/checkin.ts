@@ -1,12 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestIP, setResponseStatus } from "@tanstack/react-start/server";
 import { db } from "#/lib/db.server";
+import { ladeEinstellungen } from "#/lib/einstellungen.server";
 import { limitUeberschritten } from "#/lib/ratenlimit.server";
 import { ladePublicKey } from "#/lib/schluessel.server";
 import { umschlagSchema } from "#/lib/umschlag";
 
 export const holePublicKey = createServerFn({ method: "GET" }).handler(() =>
 	ladePublicKey(),
+);
+
+export const holeEinstellungen = createServerFn({ method: "GET" }).handler(() =>
+	ladeEinstellungen(),
 );
 
 type SpeichernErgebnis =

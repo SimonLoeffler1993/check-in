@@ -17,6 +17,7 @@
     "db:neu": "prisma migrate dev"
   },
   "dependencies": {
+    "@hookform/resolvers": "^7.0.1",
     "@prisma/adapter-mariadb": "7.10.1",
     "@prisma/client": "7.10.1",
     "@tailwindcss/vite": "^4.1.18",
@@ -28,6 +29,7 @@
     "prisma": "7.10.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-hook-form": "^7.91.0",
     "tailwindcss": "^4.1.18",
     "zod": "^4.6.7"
   },
