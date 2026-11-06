@@ -11,6 +11,8 @@ RUN npm run build
 
 # Nur das fertige Ergebnis von Nitro, ohne Quellcode und node_modules
 FROM node:${NODE_VERSION} AS runner
+# Ordnet das Paket in der GitHub Container Registry diesem Repo zu
+LABEL org.opencontainers.image.source=https://github.com/SimonLoeffler1993/check-in
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
