@@ -1,0 +1,14 @@
+node_modules
+.output
+.nitro
+.tanstack
+.git
+.github
+.vscode
+.env
+.env.*
+!.env.example
+*.pem
+src/generated
+tools
+README.md

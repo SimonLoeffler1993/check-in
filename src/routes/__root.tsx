@@ -1,11 +1,20 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import {
+	createRootRoute,
+	HeadContent,
+	Outlet,
+	Scripts,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import Header from "../components/Header";
+import Berge from "#/components/Berge";
+import Footer from "#/components/Footer";
+import Header from "#/components/Header";
+import { holeEinstellungen } from "#/server/checkin";
 
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
+	loader: () => holeEinstellungen(),
 	head: () => ({
 		meta: [
 			{
@@ -27,7 +36,23 @@ export const Route = createRootRoute({
 		],
 	}),
 	shellComponent: RootDocument,
+	component: Seite,
 });
+
+function Seite() {
+	const { datenschutzUrl, impressumUrl } = Route.useLoaderData();
+
+	return (
+		<div className="relative flex min-h-dvh flex-col">
+			<Berge />
+			<Header />
+			<div className="relative flex-1">
+				<Outlet />
+			</div>
+			<Footer datenschutzUrl={datenschutzUrl} impressumUrl={impressumUrl} />
+		</div>
+	);
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
@@ -35,8 +60,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			<head>
 				<HeadContent />
 			</head>
-			<body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
-				<Header />
+			<body>
 				{children}
 				{import.meta.env.DEV && (
 					<TanStackDevtools
